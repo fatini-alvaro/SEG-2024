@@ -6,12 +6,13 @@ import { Traco } from "../../components/ui/traco";
 import { ICredential } from "../../../@libs/types";
 import { AuthService } from "../../../services/auth-service";
 import { useAuth } from "../../../hooks/useAuth";
+import { toast } from "react-toastify";
 
 
 function SignInPage() {
   const navigate = useNavigate();
 
-  const {setUser} = useAuth();
+  const { setUser, setFactorId } = useAuth();
 
   //State - Loading
   const [loading, setLoading] = useState(false)
@@ -28,20 +29,32 @@ function SignInPage() {
 
     AuthService.signIn(credential)
       .then(result => {
-        navigate('/');
 
-        setUser({
+        const currentUser = {
           uid: result.user.id,
           email: result.user.email || '',
           name: result.user.user_metadata?.name
-        })
+        };
+
+        AuthService.mfa.getFactorId()
+          .then(result => {
+            if (result.factorID) {
+              setFactorId(result.factorID);
+              navigate('/auth/two-factor', { replace: true });
+            } else {
+              setUser(currentUser);
+              navigate('/', {replace: true});
+            }
+          })
+        
+        navigate('/');
       })
-      .catch(error => {
-        console.error('Pau: ', error);
+      .catch(() => {
+        toast.error('Credencial inválida');
       })
       .finally(() => {
         setLoading(false)
-      });
+      })
   }
 
   return (
